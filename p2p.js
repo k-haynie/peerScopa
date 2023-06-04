@@ -39,7 +39,7 @@ peer.on('connection', (conn) => {
 		peers.push(conn);
 	}
 	else if (!host && conn.data != "Room full") {	// Publish the peer connection to the player
-		connected = true;
+		connected = conn;
 		body.innerHTML = `
 		<h4 class="headertext">You have successfully been connected!</h4>
 		<p>Awaiting the host to start the game.</p>
@@ -53,7 +53,7 @@ peer.on('connection', (conn) => {
 		
 		conn.on("data", (data) => {	// set up a response upon receiving data
 			console.log("Data handled by peer.on function");
-			if (!host && !connected) {console.log("Not connected, returning"); return};
+			if (!host && (connected == false)) {console.log("Not connected, returning"); return};
 
 			// establish a two-way connection when a remote reaches out
 			if (host && data === "Connection received") {
@@ -149,16 +149,11 @@ function connFire(id=null) {
 			}
 			// if a card is discarded into the field
 			else if (data.includes("DISCARD")) {
-				cardField.innerHTML += `<li><input type="checkbox">${int(data.splice(7))%10}</input></li>`;
+				cardField.innerHTML += `<li><input type="checkbox" >${parseInt(data.slice(7))}</input></li>`;
 			}
 			// for when the field needs updating
 			else if (data.includes("UPDATE")) {
-				let cardField = document.getElementById("cardField");
-				cardField.innerHTML = "";
-				
-				let actualData = data.splice(6);
-				actualData.pop();
-				acutalData.split(".").forEach(card => cardField.innerHTML += `<li><input type="checkbox">${int(card)%10}</input></li>`);
+				updateField(data);
 			}
 			// for when a scopa occurs
 			else if (data === "SCOPA") {
@@ -210,7 +205,6 @@ const gameOver = () => {
 
 // start a game with valid players
 async function startGame() {
-	console.log(peers.length)
 	if (1 >= peers.length || peers.length > 4) {
 		alert("You need 2-4 players to start a game.");
 	}
@@ -221,6 +215,7 @@ async function startGame() {
 
 		while (!gameOver()) {
 			cards = [...Array(40).keys()];
+
 			// shuffle the cards with Fisher-Yates
 			for (let i = 39; i > 0; --i) {
 				const j = Math.floor(Math.random() * (i + 1));
@@ -235,27 +230,29 @@ async function startGame() {
 			
 			let activePlayerIndex = 1;
 			
-			while (cards) {
+			while (cards.length > 0) {
 				dealCards();
 				broadcast("GO");
 				printHands();
-				
-				while (hand) {
+				console.log("REDALT", hand, hand.length);
+
+				while (hand.length > 0) {
+					console.log("HOST HAND", hand, hand.length);
 					turnCompleted = false;
 					
 					if (activePlayerIndex === 0) {
-					 // host's turn
 						turn = true;
 						alert("Your turn!");
 					} 
 					else {
 						peers[activePlayerIndex].send("CHOOSE");
-						// wait for the player to complete their turn
-						// let asdf = prompt("nonoverloading");
-						await waitUntil(() => turnCompleted);
-						
-						
 					}
+
+					await waitUntil(() => turnCompleted);
+					activePlayerIndex += 1;
+					activePlayerIndex %= peers.length;
+
+					console.log("player change, hand length: " + hand.length + hand);
 				};
 			};
 			
@@ -266,9 +263,9 @@ async function startGame() {
 			// should create an ordered list cards each player has. Look up a way to find the index of the max value and resolve for a tie
 			let mostCards = gameStats.forEach(player => {return sum(player.tricks.forEach(trick => {return sum(trick.length)}))});
 			let mostTricks = gameStats.forEach(player => {return sum(player.tricks)});
-			let mostHearts = gameStats.forEach(player => {return sum(player.tricks.forEach(trick => {return sum(trick.forEach(card => int(card) < 10 ? card : pass))}))});
-			let mostSevens = gameStats.forEach(player => {return sum(player.tricks.forEach(trick => {return sum(trick.forEach(card => int(card) % 6 === 0 ? card : pass))}))});
-			let sevenHearts = gameStats.forEach(player => {return bool(player.tricks.forEach(trick => {return bool(trick.forEach(card => int(card) === 6 ? True : pass))}))});
+			let mostHearts = gameStats.forEach(player => {return sum(player.tricks.forEach(trick => {return sum(trick.forEach(card => parseInt(card) < 10 ? card : pass))}))});
+			let mostSevens = gameStats.forEach(player => {return sum(player.tricks.forEach(trick => {return sum(trick.forEach(card => parseInt(card) % 6 === 0 ? card : pass))}))});
+			let sevenHearts = gameStats.forEach(player => {return bool(player.tricks.forEach(trick => {return bool(trick.forEach(card => parseInt(card) === 6 ? True : pass))}))});
 			
 			// update Stats here			
 		}
@@ -324,11 +321,8 @@ function publishField(data) {
 	let cardField = document.getElementById("cardField");
 	let actualData = data.slice(5, -1);
 	console.log(actualData);
-	actualData.split(".").forEach(card => cardField.innerHTML += `<li><input type="checkbox">${Number(card)%10}</input></li>`);
+	actualData.split(".").forEach(card => cardField.innerHTML += `<li><input type="checkbox">${parseInt(card)}</input></li>`);
 }
-
-
-
 
 // player.js
 // variables for player
@@ -344,7 +338,7 @@ let player = {
 
 function printHands() {
 	let visualCards = document.getElementById("cardHand");
-	hand.forEach(card => visualCards.innerHTML += `<option value=${card % 10}>${card % 10}</option>`);
+	hand.forEach(card => visualCards.innerHTML += `<option value=${card}>${card}</option>`);
 }
 
 function joinGame() {
@@ -366,36 +360,60 @@ function playerTurn(conn) {
 				fieldSelectedTotal.push(cardField.children[i].childNodes[1].data);
 		};		
 		
-		if (fieldSelectedTotal.reduce((int) => Number.parseInt(int), 0) === handSelected.value || fieldSelectedTotal.length === 0) {
-			console.log("You might need to redefine the peer instance in player.js :36");
-			let transferData = `TURN${handSelected}/${fieldSelectedTotal.forEach(card => {return str(card) + "."})}`
-			console.log(peer._connections);
-			(host ? handleTurn(transferData) : peer._connections[0].value[0].peerConnectionsend(transferData));
+
+		if (fieldSelectedTotal.length === 0 ||
+			(fieldSelectedTotal.length != 0 && parseInt(fieldSelectedTotal.reduce((sum, int) => parseInt(sum) + parseInt(int)%10))%10 === parseInt(handSelected.value%10))) {
+			
+			let transferData = `TURN${handSelected.value}/${fieldSelectedTotal.reduce((sum, card) => sum + card + ".", "")}`;
+			console.log("hand pre-splice " + hand);
+			hand.splice(hand.indexOf(parseInt(handSelected.value)), 1);
+			console.log("hand post-splice " + hand);
+			handSelected.options[handSelected.selectedIndex].remove();
+			(host ? handleTurn(transferData, peer) : connected.send(transferData));
+
+			turn = false;
 		} 
 		else {
 			alert("Please make a valid choice.");
 		}		
 	}
-	turnCompleted = true;
+	
+}
+
+// update the field when cards are removed
+function updateField(data) {
+	let cardField = document.getElementById("cardField").getElementsByTagName("li");
+
+	data.slice(6).slice(0, -1).split(".").forEach(card => {
+
+		field.splice(field.indexOf(parseInt(card)), 1);
+		
+		for (let i = cardField.length - 1; i > -1; --i) {
+			if (cardField[i].innerText == card) {
+				cardField[i].remove();
+			};
+		};			
+	});
 }
 
 // handle a player's turn -- only called by the host
 function handleTurn(turnDataRaw, conn=null) {
-	let turnData = turnDataRaw.splice(4).split("/");
+	let turnData = turnDataRaw.slice(4).split("/");
+	console.log("turnData " + turnData);
 
 	// in case a card was not merely getting laid down
-	if (turnData.length > 1) {
+	if (turnData.length > 1 && turnData[1].split(".").length > 1) {
 		let nonHand = turnData[1].split(".")
 		
+		console.log(turnData);
 		// update the field, locally and remotely
-		nonHand.forEach(card => field.splice(field.indexOf(int(card)), 1));
+		updateField(`UPDATE${turnData[1]}`);
 		broadcast(`UPDATE${turnData[1]}`);
 		
-		// insert the first card and remove the excess period
-		nonHand.insert(0, turnData[0]);
-		nonHand.pop();
-		gameStats[conn].tricks.push(nonHand);		
+		// update player points
+		(host ? gameStats[peer].tricks.push(turnData) : gameStats[conn].tricks.push(turnData));
 		
+		// in case there is a scopa
 		if (field.length === 0) {
 			(conn ? gameStats[conn].points += 1 : gameStats[peer].points += 1);
 			alert("There has been a Scopa!");
@@ -404,8 +422,10 @@ function handleTurn(turnDataRaw, conn=null) {
 	}
 	// discard to the field, update local and remotes
 	else {
-		field.push(int(turnData[0]));
-		cardField.innerHTML += `<li><input type="checkbox">${int(data.splice(7))%10}</input></li>`;
+		console.log(parseInt(turnData[0]), turnData[0]);
+		field.push(parseInt(turnData[0]));
+		cardField.innerHTML += `<li><input type="checkbox">${parseInt(turnData[0])}</input></li>`;
 		broadcast(`DISCARD${turnData[0]}`);
 	}
+	turnCompleted = true;
 }
