@@ -1,0 +1,22 @@
+button {
+    padding: 10px;
+    background-color: lightblue;
+    border-radius: 15px;
+}
+button:hover {
+    cursor: pointer;
+    -ms-zoom-animation: default;
+}
+
+body {
+    background-color:darkseagreen;
+    font-family: Verdana;
+}
+input {
+    width: 500px;
+    font-size: large;
+    border-radius: 15px;
+    border-width: 0px;
+    line-height: 2em;
+}
+
