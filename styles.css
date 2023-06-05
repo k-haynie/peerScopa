@@ -7,12 +7,14 @@ button:hover {
     cursor: pointer;
     -ms-zoom-animation: default;
 }
-
+li {
+    display: block;
+}
 body {
     background-color:darkseagreen;
     font-family: Verdana;
 }
-input {
+input[type="text"] {
     width: 500px;
     font-size: large;
     border-radius: 15px;
