@@ -4,7 +4,7 @@
 // to run offline: 
 // pull up Admin CMD and use the command: peerjs --port 9000 --key peerjs --path /myapp
 // var peer = new Peer({host: "localhost", port: 9000, path: "/myapp"});
-
+import "https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js";
 // variables for both host and player
 var peer = new Peer();
 let body = document.getElementById("body");
@@ -128,6 +128,7 @@ function connFire(id=null) {
 			}
 			// take a dealt card
 			else if (data.includes("DEAL")){
+				console.log("ADDING CARD ", data)
 				hand.push(data.slice(4));
 			}
 			// start the game
@@ -199,6 +200,7 @@ async function publishID() {
 
 const gameOver = () => {
 	let totalPoints = [];
+	console.log(gameStats);
 	Object.keys(gameStats).forEach(player => {totalPoints.push(gameStats[player].points)});
 	return totalPoints.some(score => score >= 14);
 }
@@ -210,14 +212,18 @@ async function startGame() {
 	}
 	else {
 		// create a player identity for each player and close off the room
-		peers.forEach(peer => gameStats[peer] = player); // map connections to players
+		console.log(peers);
+		peers.forEach(peer => {
+				gameStats[typeof(peer) == "string" ? peer : peer.peer] = player;
+		}); // map connections to players
 		openRoom = false;
+		console.log(gameStats);
 
 		while (!gameOver()) {
-			cards = [...Array(40).keys()];
+			cards = [...Array(22).keys()];
 
 			// shuffle the cards with Fisher-Yates
-			for (let i = 39; i > 0; --i) {
+			for (let i = cards.length-1; i > 0; --i) {
 				const j = Math.floor(Math.random() * (i + 1));
 				[cards[i], cards[j]] = [cards[j], cards[i]];
 			};
@@ -261,11 +267,14 @@ async function startGame() {
 			
 			// hearts can be 0-9
 			// should create an ordered list cards each player has. Look up a way to find the index of the max value and resolve for a tie
-			let mostCards = gameStats.forEach(player => {return sum(player.tricks.forEach(trick => {return sum(trick.length)}))});
-			let mostTricks = gameStats.forEach(player => {return sum(player.tricks)});
-			let mostHearts = gameStats.forEach(player => {return sum(player.tricks.forEach(trick => {return sum(trick.forEach(card => parseInt(card) < 10 ? card : pass))}))});
-			let mostSevens = gameStats.forEach(player => {return sum(player.tricks.forEach(trick => {return sum(trick.forEach(card => parseInt(card) % 6 === 0 ? card : pass))}))});
-			let sevenHearts = gameStats.forEach(player => {return bool(player.tricks.forEach(trick => {return bool(trick.forEach(card => parseInt(card) === 6 ? True : pass))}))});
+			console.log(gameStats);
+			let mostCardsPlayer = Object.keys(gameStats).forEach(player => console.log(player));//{return (player.tricks.forEach(trick => {return trick.split(".").length})).reduce((a, b) => a + b, 0)}).reduce((a, b, i) => a[0] < b ? [b, i] : a, [Number.MIN_VALUE,-1]);
+			console.log(mostCardsPlayer);
+			let mostTricksPlayer = Object.keys(gameStats).forEach(player => {return player.tricks.length}).reduce((a, b, i) => a[0] < b ? [b, i] : a, [Number.MIN_VALUE,-1]);
+			console.log(mostTricksPlayer);
+			let mostHearts = Object.keys(gameStats).forEach(player => {return sum(player.tricks.forEach(trick => {return sum(trick.forEach(card => parseInt(card) < 10 ? card : pass))}))});
+			let mostSevens = Object.keys(gameStats).forEach(player => {return sum(player.tricks.forEach(trick => {return sum(trick.forEach(card => parseInt(card) % 6 === 0 ? card : pass))}))});
+			let sevenHearts = Object.keys(gameStats).forEach(player => {return bool(player.tricks.forEach(trick => {return bool(trick.forEach(card => parseInt(card) === 6 ? True : pass))}))});
 			
 			// update Stats here			
 		}
@@ -304,7 +313,6 @@ function broadcast(msg, callback=null) {
 	console.log("Broadcasting " + msg);
 	peers.forEach(peer => {
 		if (typeof(peer) != "string") {
-			console.log(peer, typeof(peer));
 			peer.send(msg);
 		}
 		else if (callback) {
@@ -331,12 +339,12 @@ let turn = false;
 let turnCompleted = true;
 let hand = [];
 
-let player = {
+type player = {
 	points: 0,
 	tricks: []
 }
 
-function printHands() {
+async function printHands() {
 	let visualCards = document.getElementById("cardHand");
 	hand.forEach(card => visualCards.innerHTML += `<option value=${card}>${card}</option>`);
 }
@@ -381,7 +389,7 @@ function playerTurn(conn) {
 }
 
 // update the field when cards are removed
-function updateField(data) {
+async function updateField(data) {
 	let cardField = document.getElementById("cardField").getElementsByTagName("li");
 
 	data.slice(6).slice(0, -1).split(".").forEach(card => {
@@ -398,6 +406,8 @@ function updateField(data) {
 
 // handle a player's turn -- only called by the host
 function handleTurn(turnDataRaw, conn=null) {
+	console.log("\n\n");
+	console.log(conn, peer);
 	let turnData = turnDataRaw.slice(4).split("/");
 	console.log("turnData " + turnData);
 
@@ -411,11 +421,11 @@ function handleTurn(turnDataRaw, conn=null) {
 		broadcast(`UPDATE${turnData[1]}`);
 		
 		// update player points
-		(host ? gameStats[peer].tricks.push(turnData) : gameStats[conn].tricks.push(turnData));
+		(host ? gameStats[peer._id].tricks.push(turnData) : gameStats[conn.peer].tricks.push(turnData));
 		
 		// in case there is a scopa
 		if (field.length === 0) {
-			(conn ? gameStats[conn].points += 1 : gameStats[peer].points += 1);
+			(conn ? gameStats[conn.peer].points += 1 : gameStats[peer._id].points += 1);
 			alert("There has been a Scopa!");
 			broadcast("SCOPA");
 		}			

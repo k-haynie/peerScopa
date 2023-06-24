@@ -12,7 +12,8 @@ body {
     background-color:darkseagreen;
     font-family: Verdana;
 }
-input {
+
+#peerID {
     width: 500px;
     font-size: large;
     border-radius: 15px;
