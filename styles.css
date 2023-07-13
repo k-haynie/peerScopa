@@ -7,7 +7,9 @@ button:hover {
     cursor: pointer;
     -ms-zoom-animation: default;
 }
-
+li {
+    display: block;
+}
 body {
     background-color:darkseagreen;
     font-family: Verdana;
