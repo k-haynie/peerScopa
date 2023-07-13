@@ -9,7 +9,7 @@ interface peerObject {
 
 export interface playerStatsProps {
     points: number,
-    tricks: number[][],
+    tricks: string[][],
 }
 
 export function PeerHeader(peer: peerObject) {
