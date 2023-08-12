@@ -1,9 +1,16 @@
-import React from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { DataConnection } from "peerjs";
+import { Badge, InputAdornment, IconButton, CircularProgress, TextField, Tooltip, Typography } from "@mui/material";
+import { ContentCopy, Groups } from "@mui/icons-material"
 
 interface peerObject {
+    status: string,
+    count: number,
+    gameOver: boolean,
+    points: Map<string, playerStatsProps>,
     peer?: {
-        id: string
+        id: string,
+        connections: object,
     }
 }
 
@@ -12,74 +19,47 @@ export interface playerStatsProps {
     tricks: string[][],
 }
 
-export function PeerHeader(peer: peerObject) {
-    return (
-    <div style={{
-        color: "white",
-        padding: "10px",
-        backgroundColor: "darkgreen",
-    }}>{peer.peer == null ? "Loading..." : "You are " + peer.peer.id}</div>
-    );
-}
+export const PeerHeader = forwardRef<HTMLDivElement, peerObject>(( props, ref) => {
+  return (
+  <div ref={ref} className={"pageHeader " + props.status + (props.gameOver ? " open" : " closed")}>
+      <p>Scopa</p>
+      {props.peer == null ? <CircularProgress variant="indeterminate" color={"secondary"} /> : 
+
+        <div style={{display: "flex", gap: "20px", justifyContent: "space-between"}}>
+          <Tooltip title={props.status === "host" ? "Player Count" : "Connection to Host"}>
+            <Badge
+                badgeContent={props.status === "host" ? props.count : props.status === "player" && props.count > 0 ? "✓" : "-"}
+                anchorOrigin={{vertical: "top", horizontal: "left"}}
+                style={{alignSelf: "center"}}
+                color="success"
+            >            
+                <Groups htmlColor="white" fontSize="large" />
+            </Badge>            
+          </Tooltip>
+            {props.gameOver ?
+                <>
+                    <p style={{fontSize: "18px"}}>{props.peer.id}</p>
+                    <Tooltip title="Copy ID to clipboard">
+                        <IconButton onClick={() => {
+                        props.peer && navigator.clipboard.writeText(props.peer.id)
+                        }}>
+                        <ContentCopy htmlColor="white" fontSize="medium" />
+                        </IconButton>
+                    </Tooltip>          
+                </> : 
+                <>
+                    <Tooltip title="Points">
+                        <Typography className="inGame">
+                            {(props.points.size > 0 && props.points.get(props.peer?.id)?.points) || 0}
+                        </Typography>
+                    </Tooltip>
+                </>
+            }            
+          </div>
+      }
+  </div>
+  );
+})
 //https://codesandbox.io/s/npvhr?file=/src/context/PeerContext.ts
 //https://blog.logrocket.com/getting-started-peerjs/
 //https://www.sitepoint.com/file-sharing-component-react/
-
-export function connectionCallbacks(conn: DataConnection, setConnections: Function) {
-    // handle a disconnection
-    conn.on("close", () => {	
-        setConnections((connections: DataConnection[]) => ([...connections].filter(channel => channel !== conn)))
-        console.log("connection closed");
-    });
-
-    conn.on("data", (data) => {
-        console.log(data);
-        /*
-        if (data === "Room full") {
-            conn.close();
-            //console.log("Room is full");
-            body.innerHTML = `
-            <h4 class="headertext">That room is full! Try again.</h4>
-            <input id="peerID" type="text"></input>
-            <button onclick="connFire()">Connect</button>`;	
-        }
-        // take a dealt card
-        else if (data.includes("DEAL")){
-            //console.log("ADDING CARD ", data)
-            //hand.push(data.slice(4));
-        }
-        // start the game
-        else if (data == "GO") {
-            //printHands();
-        }
-        // print initial game values
-        else if (data.includes("FIELD")) {
-            //publishField(data);
-        } 
-        // if it is a player's turn
-        else if (data == "CHOOSE") {
-            //turn = true;
-            alert("Your turn!");
-        } 
-        // if a turn has been completed
-        else if (data.includes("TURN")) {
-            //handleTurn(data, conn);
-        }
-        // if a card is discarded into the field
-        else if (data.includes("DISCARD")) {
-            //cardField.innerHTML += `<li><input type="checkbox" >${parseInt(data.slice(7))}</input></li>`;
-        }
-        // for when the field needs updating
-        else if (data.includes("UPDATE")) {
-            //updateField(data);
-        }
-        // for when a scopa occurs
-        else if (data === "SCOPA") {
-            alert("There has been a scopa!");
-        }
-        else {
-            console.log(data);
-        };
-        */
-    })
-}

@@ -1,15 +1,15 @@
 import React from "react";
+import { Button } from "@mui/material";
 
 interface MenuScreenProps {
-    startHost: Function,
-    startPlayer: Function,
+    start: Function,
 }
 
 export function MenuScreen(props: MenuScreenProps) {
     return (
-        <>
-            <button onClick={() => props.startHost()}>Host a Game</button>
-            <button onClick={() => props.startPlayer()}>Join a Game</button>	
-        </>
+        <div className="menuContent">
+            <Button variant="contained" onClick={() => props.start("host")}>Host a Game</Button>
+            <Button variant="contained"  onClick={() => props.start("player")}>Join a Game</Button>	
+        </div>
     )
 }
