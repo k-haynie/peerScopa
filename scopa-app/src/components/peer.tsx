@@ -1,6 +1,5 @@
-import { useState, useEffect, forwardRef } from "react";
-import { DataConnection } from "peerjs";
-import { Badge, InputAdornment, IconButton, CircularProgress, TextField, Tooltip, Typography } from "@mui/material";
+import { forwardRef } from "react";
+import { Badge, IconButton, CircularProgress, Tooltip, Typography } from "@mui/material";
 import { ContentCopy, Groups } from "@mui/icons-material"
 
 interface peerObject {

@@ -36,6 +36,7 @@ export function GameScreen(props: GameScreenProps){
                         }} 
                         key={index} className="card" 
                         src={cardSVG(card.value + card.suite)} 
+                        alt={card.value + card.suite}
                     />
                 ))}
             </div>
@@ -49,7 +50,8 @@ export function GameScreen(props: GameScreenProps){
                             filter: handChoice === card.card_id ? "drop-shadow(black 5px 5px 5px)" : "none"
                         }} 
                         key={index} className="card" 
-                        src={cardSVG(card.value + card.suite)} 
+                        src={cardSVG(card.value + card.suite)}
+                        alt={card.value + card.suite}
                     />
                 ))}
             </div>

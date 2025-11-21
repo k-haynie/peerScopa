@@ -1,4 +1,4 @@
-import { Button, Dialog, DialogActions, DialogTitle, DialogContent, Typography } from "@mui/material";
+import { Button, Dialog, DialogActions, DialogTitle, DialogContent } from "@mui/material";
 
 export function InstructDialog(props: {open: boolean, setOpen: Function}) {
     return (
